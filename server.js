@@ -393,7 +393,10 @@ async function bootstrap() {
     }
 
     const app = express();
-
+    app.use(express.static(__dirname));
+    app.get('/front', (req, res) => {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    });
     app.post("/infer", upload.single("image"), async (req, res) => {
         if (!req.file) {
             return res.status(400).json({
@@ -435,6 +438,8 @@ async function bootstrap() {
         console.log(`Endpoint de inferência: POST http://localhost:${PORT}/infer`);
         console.log("\nCampo esperado no multipart/form-data:");
         console.log("image");
+        
+        console.log(`Endereço do front: http://localhost:${PORT}/front`);
     });
 }
 

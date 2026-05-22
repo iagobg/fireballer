@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIREBALLER</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="background" id="bg"></div>
+
+  <div class="container">
+    <h1 style="margin-bottom: 20px; text-shadow: 0 0 15px #ff4444;">🔥 FIREBALLER 🔥</h1>
+
+    <div class="upload-area" id="uploadArea">
+      <h2>Envie a imagem da criatura</h2>
+      <p>Clique ou arraste uma imagem</p>
+      <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    </div>
+
+    <div class="mage-container">
+      <div class="speech-bubble" id="bubble">
+        Eu sou um mago muito antigo, meu julgamento não é mais tão bom, mas me mostre uma criatura e eu te direi se é uma boa ideia usar bola de fogo!
+      </div>
+      <img src="assets/mage/foreground1.png" class="mage" id="mage" alt="Mago Julgador">
+    </div>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const mage = document.getElementById('mage');
+    const bubble = document.getElementById('bubble');
+    const resultDiv = document.getElementById('result');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+
+    const mageImages = {
+      "terrible": "assets/mage/foreground2.png",
+      "low":      "assets/mage/foreground2.png",
+      "moderate": "assets/mage/foreground3.png",
+      "high":     "assets/mage/foreground4.png",
+      "immune":   "assets/mage/foreground5.png"
+    };
+
+    const messages = {
+      "terrible": "BOLA DE FOGO! BOLA DE FOGO!",
+      "low":      "Essa criatura é lenta, a bola de fogo certamente acertará!",
+      "moderate": "Essa criatura parece ter reflexos decentes, mas uma bola de fogo não seria a pior ideia...",
+      "high":     "Essa criatura é agil demais para ser acertada por uma bola de fogo!",
+      "immune":   "Mesmo que acerte, essa criatura é imune a fogo!"
+    };
+
+    document.getElementById('bg').style.backgroundImage = "url('assets/background.png')";
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#ffaa00';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.borderColor = '#ff4444';
+    });
+
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#ff4444';
+      if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+
+    async function handleFile(file) {
+      if (!file) return;
+
+      bubble.textContent = "Analisando a criatura...";
+      resultDiv.textContent = "";
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch('http://localhost:3000/infer', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.ok) {
+          const cls = data.predictedClass.toLowerCase();
+          
+          if (mageImages[cls]) {
+            mage.src = mageImages[cls];
+          }
+
+          bubble.textContent = messages[cls] || "Análise concluída.";
+
+          resultDiv.innerHTML = `
+            <strong>${cls.toUpperCase()}</strong><br>
+            Confiança: ${(data.confidence * 100).toFixed(1)}%
+          `;
+
+        } else {
+          bubble.textContent = "Erro ao analisar a imagem.";
+          resultDiv.textContent = data.error || "Erro desconhecido";
+        }
+
+      } catch (err) {
+        console.error(err);
+        bubble.textContent = "Erro de conexão com o servidor.";
+        resultDiv.textContent = "Verifique se o backend está rodando.";
+      }
+    }
+  </script>
+</body>
+</html>
